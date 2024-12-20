@@ -1,14 +1,11 @@
 ---
-title: "Project"
+title: "Soc 2202 Final Project"
 author: "Mark Kogo"
 date: "2024-11-28"
 output:
   pdf_document:
     latex_engine: xelatex
 ---
-```{r}
-install.packages("reshape2")
-```
 
 ```{r, include=FALSE}
 library(haven)
@@ -21,74 +18,276 @@ library(ggplot2)
 library(reshape2)
 ```
 # Abstract 
+This study examines the intersection of education, income, wealth, and gender in shaping household vulnerability within the context of rural-urban migration. Building on a pluralist perspective that integrates political ecology and feminist frameworks, the analysis focuses on how socioeconomic factors and gender dynamics influence vulnerability, particularly in female-headed households. Using a binomial logistic regression model, we analyze the impact of household characteristics on a vulnerability index. Results highlight that education, income, and wealth are the most significant predictors of reduced vulnerability, with higher education levels consistently associated with decreased household risk. While the gender of the household head does not significantly affect vulnerability on its own, interactions with urban residence reveal nuanced dynamics: female-headed households face unique challenges in rural settings. These findings underscore the need for policies that enhance access to education and economic opportunities while addressing gender-specific barriers. This study contributes to migration research by illuminating the under-explored role of gender in household vulnerability and offering insights for designing equitable development interventions.
 
 # Introduction 
+## Background
+With the rise of urbanization worldwide, the rural-urban divide has emerged as a critical area of inquiry, particularly in migration studies. Recent research, particularly from a pluralist perspective, has approached rural-urban migration in ways that are more hybrid and less deterministic (De Haas, 2008). These approaches blend political ecology and feminist frameworks, viewing migration as a household strategy to diversify resources and minimize risks. This perspective acknowledges the complexity of migration decisions, emphasizing how households negotiate between economic, environmental, and social factors.
+
+One recurring theme in this body of literature, upon which this research project is built, is the transformation of gender relations within households. Migration often disrupts traditional roles, particularly in rural areas where male out-migration places women at the forefront of household decision-making. For instance, studies such as those by Francis and Hoddinott (1993) and Rocheleau (2001) highlight how shifts in household leadership due to migration influence women’s empowerment, access to resources, and vulnerability to risks. However, the specific role of the household head’s gender in shaping household vulnerability remains underexplored.
+
+
+## Research Question
+This paper builds on the pluralist perspective to examine how the gender of the household head mediates a household’s ability to cope with risks associated with rural-urban migration. By focusing on the intersection of gender dynamics and vulnerability, within the various socioeconomic milieux, this study aims to contribute to the broader understanding of how rural households navigate the challenges and opportunities of an increasingly urbanized world. But more specifically, this paper examines how the gender of the household head influences a household’s ability to mitigate risks associated with rural-urban migration. 
+
+This paper draws from a FinAccess dataset, outlining demographic details of Kenyan households over 4 years. Each row in the dataset represents a household. The dataset has 1503 variables.
 
 # Methods 
+##Construction of the Vulnerability Index
+Our response variable `vul_index` is a categorical variable, classifying households into 'Vulnerable' or 'Less Vulnerable'. The FinAccess survey constructs its Vulnerability Index based on a series of self-reported responses to questions assessing financial risks, shocks, and coping mechanisms within households over the last two years. The vulnerability index categorizes households into three levels:
+
+Most Vulnerable (1)
+Vulnerable (2)
+Least Vulnerable (3)
+
+
+1. Financial Risks (P1): The survey lists various events that could negatively impact household finances. Respondents indicate which of these risks occurred in their household over the past two years. Examples include:
+* Floods, droughts, or theft
+* Loss of income, loss of family members, or savings
+* Increases in costs of basic goods or medical expenses.
+  
+2. Impact Ranking (P2): Respondents rank the two risks that had the biggest impact on their income, identifying which event was the most impactful and which was the second most impactful.
+
+3. Coping Mechanisms (P3): Households are asked where they obtained resources to deal with their main risk. These responses reveal financial resilience, including:
+* Using savings
+* Borrowing money (formal or informal)
+* Selling assets or receiving help from family/community.
+
+4. General Vulnerability Indicators (P4): To assess broader financial distress, respondents indicate how often their households:
+* Go without enough food, shelter, or medical treatment.
+* Lack funds for education or other essential expenditures.
+* Experience safety concerns or miss family events due to financial constraints.
+
+##Categorization
+Based on these responses, the FinAccess dataset and survey group households into the three vulnerability categories:
+* `Most Vulnerable`: Households experiencing significant financial shocks with limited coping mechanisms, frequent lack of basic needs, and severe income disruptions.
+* `Vulnerable`: Households facing moderate financial stress or exposure to risks but with slightly better coping strategies or fewer disruptions.
+* `Least Vulnerable`: Households with greater financial resilience, fewer shocks, and more robust means to cope with risks (e.g., savings, assets, or community support).
+
+The responses to financial risks, impact severity, and coping strategies are combined into a composite score, which determines a household's classification within the Vulnerability Index.
+
+In my analysis, I collapsed `Most Vulnerable` into `Vulnerable` in order to have a binary outcome for my Logistic Regression. Additionally, the most vulnerable class only made up 8.4% of the respondents as opposed to the Vulnerable and Least Vulnerable categories which made up 50.4% and 41.2%. Performing this collapse made the dataset more balanced, with Vulnerable having a proportion of roughly 56% after adjusting for missingness.
+
+## Data Preparation
+The code blocks below show the steps I took at cleaning up the data. After reading the data in and selecting a subset of the aggregated predictors(most of the datasets predictors came from survey answers such as P1 and P2 above, with the following aggregates), I drop the missing rows. Afterwards, I recoded the categorical variables for ease of interpretability in the plots and and the regressions. Additionally, I also scale the continuous predictors, such as `monthly_income`.
+
+```{r}
+# reading in the data
+data = haven::read_dta('~/Desktop/SOC 2202 PSET/data/FinAccess_2016_data_final_anonymized_STATA.dta')
+```
+
+
+```{r}
+# Creating a subset to work with 
+s_data <- data %>% 
+  select(age_range,
+         agegroup,
+         youth,
+         monthly_income,
+         income_source_num,
+         income_earners_hh,
+         incomegp,
+         livelihoodcat, 
+         livelihoodcat2, 
+         education,
+         education1,
+         education2,
+         education3,
+         education4,
+         education_femhead,
+         gender_of_household_head,
+         gender_of_respondent,
+         region,
+         urban,
+         rural,
+         maritalgp,
+         religiongp,
+         permanent_emp,
+         casual_emp, 
+         vul_index, 
+         wealth_quint
+         )
+
+clean_subset <- na.omit(s_data)
+```
+
+
+
+```{r}
+# Recoding the Categorical Variables
+clean_subset <- clean_subset %>%
+  mutate(livelihoodcat = recode(as.numeric(livelihoodcat),
+                                `1` = "Agric",
+                                `2` = "Employed",
+                                `3` = "Own Business",
+                                `4` = "Dependent",
+                                `5` = "Casual",
+                                `6` = "Other"))
+
+clean_subset <- clean_subset %>%
+  mutate(education = recode(as.numeric(education),
+                                `1` = "None",
+                                `2` = "Primary",
+                                `3` = "Secondary",
+                                `4` = "Tertiary"
+                            ))
+
+clean_subset <- clean_subset %>%
+  mutate(education_femhead = recode(as.numeric(education_femhead),
+                                `1` = "None",
+                                `2` = "Primary",
+                                `3` = "Secondary",
+                                `4` = "Tertiary"
+                            ))
+
+clean_subset <- clean_subset %>%
+  mutate(gender_of_household_head = as_factor(gender_of_household_head)) %>%
+  mutate(gender_of_household_head = recode(gender_of_household_head,
+                                           "1" = "Male",
+                                           "2" = "Female"))
+# Variable for Residence Type
+clean_subset <- clean_subset %>%
+  mutate(Residence_Type = case_when(
+    rural == 1 ~ "Rural",    
+    urban == 1 ~ "Urban",    
+    TRUE ~ "Unknown"         
+  ))
+
+# Mutating the Vulnerability Index to be a binomial variable
+clean_subset <- clean_subset %>%
+  mutate(vul_index = case_when(
+    vul_index == 1 ~ "Vulnerable",
+    vul_index == 2 ~ "Vulnerable",
+    vul_index == 3 ~ "Least Vulnerable",
+    TRUE ~ NA_character_
+  ))
+
+clean_subset$vul_index <- factor(clean_subset$vul_index, levels = c("Least Vulnerable", "Vulnerable"))
+
+# scaling continuous variables 
+clean_subset$monthly_income <- scale(clean_subset$monthly_income)
+
+# Handling class imbalances
+```
+
+
 ## Exploratory Data Analysis
 ```{r}
-brazil_rev <- read.csv('~/Desktop/SOC 2202 PSET/data/BRAZIL_CITIES_REV2022.CSV')
-```
-```{r}
-colnames(brazil_rev)
-```
-```{r}
-# Data Visualizations
-# Histogram of Life Expectancy Index
-min(brazil_rev$IDHM_Longevidade)
-brazil_rev <- brazil_rev %>% filter(IDHM_Longevidade > 0 & IDHM_Longevidade <= 1)
 
-ggplot(brazil_rev, aes(x = IDHM_Longevidade))+
-  geom_histogram(bins = 20, fill = "blue", alpha = 0.7, color = "black") +
-  ggtitle("Distribution of Life Expectancy Index (IDHM_Longevidade)") +
-  xlab("IDHM_Longevidade") +
-  ylab("Frequency") +
+# Summarize data for proportions
+education_summary <- clean_subset %>%
+  group_by(Residence_Type, education_femhead) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(prop = count / sum(count))
+
+# Plot proportions
+ggplot(education_summary, aes(x = education_femhead, y = prop, fill = Residence_Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Education Levels of Female Heads: Rural vs Urban",
+       x = "Education Level",
+       y = "Proportion",
+       fill = "Household Type )") +
   theme_minimal()
 ```
+From this bar graph, we can note that female heads of the household, especially in rural areas are overrepresented in the lower tiers of education. Additionally, we can see that the counts of rural heads of households are higher than those in urban areas. This is in line with the literature discussed in the background, pointing to the gendered aspect of urbanization. However, proving the veracity of that claim is not within the scope of this paper. It is an interesting point to note.    
 
 ```{r}
-# Scatterplot of Extractive Companies vs Life Expectancy
-ggplot(brazil_rev, aes(x = IDHM_Longevidade, y =  COMP_B, color = RURAL_URBAN)) +
-  geom_point(size = 3, alpha = 0.7) +
-  scale_color_viridis_d() +
-  ggtitle("Extractive Companies vs Life Expectancy") +
-  ylab("Number of Extractive Companies (COMP_B)") +
-  xlab("Life Expectancy Index (IDHM_Longevidade)") +
+ggplot(clean_subset, aes(x = as.factor(vul_index), fill = Residence_Type)) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ gender_of_household_head) +
+  labs(x = "Vulnerability Index", 
+       fill = "Residency Type", 
+       y = "Count", 
+       title = "Distribution of Vulnerability by Urban/Rural and Gender of Household Head") +
   theme_minimal()
-```
 
-```{r}
-correlation_matrix <- brazil_rev %>% select(IDHM_Longevidade, COMP_B, GDP_CAPITA) %>% cor()
-melted_corr <- melt(correlation_matrix)
+```
+In this graph that details the distribution of vulnerability by the Residency Type and the Gender of the Household head, we can see that households led by men have fewer counts that are classified as vulnerable regardless of place. However, with the Female household heads, there is a slight increase in the counts of vulnerable households within rural areas, and those in urban areas follow a trend that is similar to the male households.
 
-ggplot(melted_corr, aes(x = Var1, y = Var2, fill = value)) +
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
-  geom_text(aes(label = round(value, 2)), color = "black") +
-  ggtitle("Correlation Heatmap of Key Variables (Confounders)") +
-  theme_minimal()
-```
+## Logistic Models
 
-```{r}
-ggplot(brazil_rev, aes(x = LONG, y = LAT, size = COMP_B, color = COMP_B)) +
-  geom_point(alpha = 0.7) +
-  scale_color_viridis_c() +
-  ggtitle("Geospatial Distribution of Extractive Companies") +
-  xlab("Longitude") +
-  ylab("Latitude") +
-  theme_minimal()
+```{r, include=TRUE, results='asis'}
+vul_lm <- glm(vul_index ~ factor(gender_of_household_head), family = binomial, data = clean_subset)
+stargazer(vul_lm, type = "latex", title = "Model 1")
+
 ```
-```{r}
-ggplot(brazil_rev, aes(x = RURAL_URBAN, y = IDHM_Longevidade, fill = RURAL_URBAN)) +
-  geom_boxplot(alpha = 0.7) +
-  scale_fill_brewer(palette = "Set3") +
-  ggtitle("Life Expectancy by Rural/Urban Typology") +
-  xlab("Rural/Urban Typology") +
-  ylab("Life Expectancy Index (IDHM_Longevidade)") +
-  theme_minimal()
+The logistic regression model examines the effect of the gender of the household head on household vulnerability, as measured by the binary outcome variable \(vul\_index\) (vulnerable = 1, not vulnerable = 0). The intercept of \(-0.29667\) indicates that the log-odds of a household being vulnerable when the household head is male (the reference category) corresponds to a probability of approximately 42.6%. The coefficient for female household heads (\(0.21722\)) suggests that having a female head increases the log-odds of vulnerability compared to male-headed households. This translates to an odds ratio of 1.243, meaning female-headed households are 24.3% more likely to be vulnerable than male-headed households. This effect is statistically significant (\(p = 0.00783\)), highlighting the role of gender in mediating a household’s ability to mitigate risks associated with rural-urban migration. However, the small reduction in deviance suggests that while gender has a significant effect, it alone does not explain much of the variation in household vulnerability. That being said, the significance is enough to reject the null hypothesis that there is no correlation between the gender of the household head and the household's score on the vulnerability index. 
+
+```{r, include=TRUE, results='asis'}
+# Vulnerability
+vul_lm2 <- glm(vul_index ~ factor(gender_of_household_head) + monthly_income + factor(education) + factor(Residence_Type) + wealth_quint + factor(youth), family=binomial, data = clean_subset)
+stargazer(vul_lm2, type = "latex", title = "Model 2")
+
 ```
+The logistic regression model investigates how gender, income, education, residence type, wealth, and youth status influence household vulnerability (\(vul\_index\)), with vulnerability coded as 1 and non-vulnerability as 0. The intercept (\(1.396\)) represents the log-odds of being vulnerable for the reference group: male-headed households with no education, living in rural areas, and not classified as youth, with average income and wealth. This corresponds to a high baseline probability of vulnerability.
+
+Among the predictors, the gender of the household head (\(p = 0.143\)) is not statistically significant, suggesting that after controlling for other factors, gender does not significantly influence household vulnerability. However, monthly income (\(-0.154\)) has a statistically significant effect (\(p = 0.023\)), indicating that higher income reduces the log-odds of vulnerability. Education level also significantly affects vulnerability. Compared to households with no education, having primary, secondary, or tertiary education reduces vulnerability, with secondary (\(-0.489\), \(p < 0.001\)) and tertiary education (\(-0.530\), \(p = 0.022\)) showing the largest effects. Wealth quintile (\(-0.626\), \(p < 0.001\)) is the strongest predictor, with higher wealth significantly reducing vulnerability. Residence type (\(p = 0.213\)) and youth status (\(p = 0.968\)) do not show significant effects.
+
+The model reduces residual deviance from 4403.5 to 3859.5, indicating improved fit compared to the null model. The AIC of 3877.5 suggests a better fit than the simpler model. Overall, the findings highlight that income, education, and wealth are critical factors mediating a household’s ability to mitigate risks, whereas gender and urban/rural residence play smaller roles when other variables are accounted for.
+```{r, include=TRUE, results='asis'}
+# Logit model with interaction terms
+vul_lm3 <- glm(vul_index ~ factor(gender_of_household_head) + monthly_income + factor(education) + factor(Residence_Type)+ wealth_quint + (factor(Residence_Type) * factor(gender_of_household_head)), family=binomial, data = clean_subset)
+
+covariate_names_3 <- names(coef(vul_lm3))
+
+stargazer(vul_lm3, type = "latex", title = "Model 3")
+
+```
+This logistic regression model builds on the previous one by including an interaction term between the gender of the household head and the residence type (urban or rural) to investigate how this combination affects household vulnerability (\(vul\_index\)). The intercept (\(1.381\)) represents the log-odds of being vulnerable for the reference group: male-headed households with no education, living in rural areas, and at average income and wealth levels. This reflects a high baseline probability of vulnerability.
+
+The main effect for female household heads (\(0.206\), \(p = 0.044\)) is statistically significant, indicating that, on average, female-headed households have higher odds of being vulnerable compared to male-headed households, when residence type and other factors are held constant. Monthly income (\(-0.157\), \(p = 0.021\)) significantly reduces vulnerability, as does higher wealth (\(-0.628\), \(p < 0.001\)). Education continues to play a significant role, with secondary (\(-0.492\), \(p < 0.001\)) and tertiary education (\(-0.530\), \(p = 0.022\)) showing the strongest reductions in vulnerability compared to no education.
+
+The residence type (urban) alone (\(0.213\), \(p = 0.064\)) suggests a marginally significant increase in the odds of vulnerability compared to rural households, though this effect is weak. The interaction term between being female and residing in an urban area (\(-0.325\), \(p = 0.126\)) is not statistically significant, indicating that the combined effect of these factors does not meaningfully differ from the sum of their individual effects.
+
+The model reduces residual deviance to 3857.1 and has an AIC of 3875.1, a slight improvement over the simpler model. This suggests that while the interaction term does not contribute significantly, the inclusion of income, education, wealth, and gender offers meaningful insights. Overall, the results reinforce that wealth, education, and income are the strongest predictors of household vulnerability, while the effects of gender and residence type are more nuanced and context-dependent.
 
 # Discussion 
+##Model 2 :
+Education: Higher education levels (primary, secondary, tertiary) significantly reduce vulnerability, with tertiary education having the strongest effect.
+Income and Wealth: Monthly income and wealth are critical in lowering vulnerability, reflecting the economic foundation needed to mitigate risks.
+Gender of Household Head: The effect of the household head's gender is not significant, suggesting no substantial difference in vulnerability between male- and female-headed households when other factors are controlled.
+Residence Type: Urban residence does not significantly alter vulnerability, showing minimal differences between rural and urban settings.
 
-# Results
+##Model 3 (Interaction Effects of gender and Residence Type):
+Education, Income, and Wealth: Similar to the first model, higher education levels, income, and wealth reduce vulnerability.
+Gender of Household Head: The main effect of gender becomes significant, with female-headed households showing slightly higher vulnerability in urban settings.
+Urban Residence: Urban households tend to have marginally higher vulnerability, but the interaction with gender suggests this effect is influenced by the gender of the household head. Female-headed urban households face specific challenges, though the interaction term is not significant.
 
+##Common Threads Across Models:
+Education as a Key Protective Factor:
+* Higher education levels consistently reduce vulnerability across all models. This effect is strong and statistically significant, underscoring the critical role of education in mitigating household risks.
+
+Economic Resources are Crucial:
+Monthly income and wealth are robust and significant predictors of lower vulnerability, emphasizing the importance of economic stability in reducing household risk.
+
+Gender Dynamics are Context-Dependent:
+* While the main effect of gender is not consistently significant, interactions with residence (Model 2) suggest that female-headed households may face unique challenges in accessing or leveraging certain protective factors in rural settings.
+
+Urban vs. Rural Residence:
+* Urban residence does not emerge as a significant factor in most models, indicating that vulnerability is influenced more by socioeconomic and educational factors than by geographic location.
+
+# Conclusion 
+Across all models, education, income, and wealth emerge as the strongest and most consistent predictors of reduced household vulnerability. Gender differences are subtle and context-dependent, with interaction terms in Models 2 and 3 highlighting specific vulnerabilities faced by female-headed households, particularly in rural settings. These findings suggest that policies addressing education access, economic empowerment, and tailored support for female-headed households could significantly reduce vulnerability. Additionally, further study with interaction models should be carried out in order to assess the fortify the objectives of this study.
+
+# References
+De Haas, H. (2008). Migration and development: A theoretical perspective. Working paper No. 9. International Migration Institute.
+
+
+Francis, E. & Hoddinott, J. (1993). Migration and changing divisions of labour: Gender relations and
+economic change in Koguta, Western Kenya. Africa: Journal of the International African Institute,
+65(2), 197–216.
+
+
+Rocheleau, D. (2001). Complex communities and relational webs uncertainty, surprise and transformation
+in Machakos. IDS Bulletin, 32(4), 78–87.
+
+@data{DVN/QUTLO2_2016,
+author = {Central Bank of Kenya and FSD Kenya and Kenya National Bureau of Statistics},
+publisher = {Harvard Dataverse},
+title = {{FinAccess Household Survey 2015}},
+UNF = {UNF:6:h0LEh5aMrdueNZ6IQ5vZVg==},
+year = {2016},
+version = {V4},
+doi = {10.7910/DVN/QUTLO2},
+url = {https://doi.org/10.7910/DVN/QUTLO2}
+}
