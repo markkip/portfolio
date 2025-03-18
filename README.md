@@ -14,7 +14,10 @@ I am a third-year student at Harvard College concentrating in Applied Mathematic
 ### HARVARD UNIVERSITY
 A.B Degree in Applied Mathematics GPA: 3.65
 Relevant Coursework: 
-SOCIOL 2203 (Advanced Quantitative Research Methods), CS 109 (Data Science), APMTH 120 (Applied Linear Algebra & Big Data), STAT 110 (Introduction to Probability) 
+SOCIOL 2203 (Advanced Quantitative Research Methods), CS 109 (Data Science), APMTH 120 (Applied Linear Algebra & Big Data), STAT 110 (Introduction to Probability)
+
+Secondary: Visual Studies 
+Relevant Coursework: AFVS 124K (Abstraction), AFVS 120 (Intermediate Oil Painting)
 
 ## Projects 
 ### pve.py
