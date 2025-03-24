@@ -23,3 +23,10 @@ Relevant Coursework: AFVS 124K (Abstraction), AFVS 120 (Intermediate Oil Paintin
 ### pve.py
 This Python script extracts statistics from scientific text using OpenAI's GPT-4 model. It connects to a SQLite database, retrieves unprocessed text chunks, and uses a chat-based model to extract specific statistical data. The script validates the extracted data, ensuring the extracted data match relevant quotations, and stores them in the database. It uses asyncio to process chunks concurrently and limits API requests to avoid exceeding usage limits. Logging and error handling are incorporated to ensure smooth processing and track issues.
 
+### Churn Project 
+This Python Project employed various machine learning algorithms on Telecommunications data in order to predict customer churn rate. The attached .ipynb file contains the exploratory data analysis, visualizations, and model fitting for the goal. Together with 2 other students, we tuned parameters for Logistic regressions, Decision trees, and a Random forest. 
+
+
+## Visualizations
+The attached visualizations (.png files) are generated in R using data from the Central Bank of Kenya's Financial Access survey. These are the preliminary explorations of a project investigating socio-spatial inequities in Kenya. 
+
